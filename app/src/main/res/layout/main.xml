@@ -43,7 +43,7 @@
                 titleTextColor 设为透明：真正绘制标题的是 CollapsingToolbarLayout，
                 这样可以避免 setSupportActionBar() 设置的标题与折叠标题重复显示。
             -->
-            <androidx.appcompat.widget.Toolbar
+            <com.google.android.material.appbar.MaterialToolbar
                 android:id="@+id/toolbar"
                 android:layout_width="match_parent"
                 android:layout_height="?attr/actionBarSize"

@@ -67,7 +67,6 @@ public class PreferenceMainFragment extends SettingsBasePreferenceFragment {
 
     private ApplicationInfo updaterApp;
     private String updaterVersion;
-    private boolean dhizukuReady;
     private boolean permissionGranted;
     private boolean updaterSupported;
 
@@ -75,6 +74,27 @@ public class PreferenceMainFragment extends SettingsBasePreferenceFragment {
     private volatile Boolean pendingFreezeToggle;
 
     private boolean receiverRegistered;
+
+    /**
+     * Dhizuku 的常驻服务被系统回收后，应用回到前台时它可能还没重新拉起。
+     * 此时 init/isPermissionGranted 会失败或抛异常，短暂的失败不能当成“未授权”。
+     */
+    private static final int DHIZUKU_CHECK_ATTEMPTS = 3;
+    private static final long DHIZUKU_CHECK_INTERVAL_MS = 500L;
+
+    /** 一次 Dhizuku 检测的结果。answered 为 false 表示多次重试后仍未能从服务拿到授权结果。 */
+    private static final class DhizukuStatus {
+        final boolean permissionGranted;
+        final boolean answered;
+        /** 系统里是否已存在 Device Owner/Profile Owner（即 Dhizuku 是否已激活）。 */
+        final boolean ownerPresent;
+
+        DhizukuStatus(boolean permissionGranted, boolean answered, boolean ownerPresent) {
+            this.permissionGranted = permissionGranted;
+            this.answered = answered;
+            this.ownerPresent = ownerPresent;
+        }
+    }
 
     /** 与 Android Settings 一样，监听系统更新策略变化广播，而不是轮询。 */
     private final BroadcastReceiver policyReceiver = new BroadcastReceiver() {
@@ -232,23 +252,13 @@ public class PreferenceMainFragment extends SettingsBasePreferenceFragment {
         }
         Context appContext = requireContext().getApplicationContext();
         ExecutorUtils.submit(() -> {
-            boolean init = false;
-            boolean granted = false;
-            try {
-                init = Dhizuku.init(appContext);
-                if (init) {
-                    granted = Dhizuku.isPermissionGranted();
-                }
-            } catch (Throwable t) {
-                Log.w(TAG, "Dhizuku init/permission check failed", t);
-            }
+            DhizukuStatus dhizuku = checkDhizukuStatus(appContext);
 
             ApplicationInfo app = findUpdaterApp(appContext);
             String version = app == null ? null : getVersionName(appContext, app.packageName);
             boolean supported = app != null && checkFreezeApi(app);
 
-            final boolean initResult = init;
-            final boolean grantedResult = granted;
+            final DhizukuStatus dhizukuResult = dhizuku;
             final ApplicationInfo appResult = app;
             final String versionResult = version;
             final boolean supportedResult = supported;
@@ -257,16 +267,58 @@ public class PreferenceMainFragment extends SettingsBasePreferenceFragment {
                 return;
             }
             requireActivity().runOnUiThread(() -> applyDetection(
-            initResult, grantedResult, appResult, versionResult, supportedResult));
+            dhizukuResult, appResult, versionResult, supportedResult));
         });
     }
 
-    private void applyDetection(boolean init, boolean granted, ApplicationInfo app,
+    /**
+     * 检查 Dhizuku 授权状态。服务进程刚被重新拉起时第一次调用可能失败，
+     * 因此这里短暂重试，而不是把一次失败当成“未授权”。
+     * init 只用于建立/恢复连接，其返回值不作为 UI 状态。
+     */
+    private static DhizukuStatus checkDhizukuStatus(Context appContext) {
+        for (int attempt = 1; attempt <= DHIZUKU_CHECK_ATTEMPTS; attempt++) {
+            try {
+                Dhizuku.init(appContext);
+                return new DhizukuStatus(Dhizuku.isPermissionGranted(), true, true);
+            } catch (Throwable t) {
+                Log.w(TAG, "Dhizuku permission check failed (attempt " + attempt + ")", t);
+            }
+            if (attempt < DHIZUKU_CHECK_ATTEMPTS) {
+                try {
+                    Thread.sleep(DHIZUKU_CHECK_INTERVAL_MS);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    break;
+                }
+            }
+        }
+        // 连不上时区分“Dhizuku 未激活”和“服务暂时不可用”
+        return new DhizukuStatus(false, false, hasDhizukuOwner(appContext));
+    }
+
+    /** 不经过 Dhizuku 服务，直接问系统 Dhizuku 是否已经以 Device Owner 激活。 */
+    private static boolean hasDhizukuOwner(Context appContext) {
+        try {
+            DevicePolicyManager dpm = (DevicePolicyManager) appContext
+                    .getSystemService(Context.DEVICE_POLICY_SERVICE);
+            ComponentName owner = dpm == null ? null : Dhizuku.getOwnerComponent(dpm);
+            return owner != null && "com.rosan.dhizuku".equals(owner.getPackageName());
+        } catch (Throwable t) {
+            return false;
+        }
+    }
+
+    private void applyDetection(DhizukuStatus dhizuku, ApplicationInfo app,
             String version, boolean supported) {
         if (!isAdded()) {
             return;
         }
-        dhizukuReady = init;
+        boolean granted = dhizuku.permissionGranted;
+        if (!dhizuku.answered && permissionGranted) {
+            // 服务暂时连不上时保留上一次已知的授权状态，避免误报“未授权”
+            granted = true;
+        }
         permissionGranted = granted;
         updaterApp = app;
         updaterVersion = version;
@@ -289,12 +341,21 @@ public class PreferenceMainFragment extends SettingsBasePreferenceFragment {
         }
 
         // 标题直接反映 Dhizuku 授权状态，不再设置描述
-        ownerCard.setTitle(granted ? "已授权" : "未授权");
-        ownerCard.setIcon(granted
-                ? R.drawable.ic_md_verified_user
-                : R.drawable.ic_md_emoticon_dead_outline);
+        if (granted) {
+            ownerCard.setTitle("已授权");
+            ownerCard.setIcon(R.drawable.ic_md_verified_user);
+        } else if (!dhizuku.answered && dhizuku.ownerPresent) {
+            // Dhizuku 已激活但拿不到授权结果：如实显示，不能报成“未授权”
+            ownerCard.setTitle("无法读取授权状态");
+            ownerCard.setIcon(R.drawable.ic_md_alert_circle_outline);
+        } else {
+            ownerCard.setTitle("未授权");
+            ownerCard.setIcon(R.drawable.ic_md_emoticon_dead_outline);
+        }
 
-        if (!init) {
+        if (!dhizuku.answered && dhizuku.ownerPresent) {
+            freezeSwitch.setSummary("无法读取 Dhizuku 授权状态");
+        } else if (!dhizuku.ownerPresent) {
             // 不主动禁用：点击开关时由监听器触发 Dhizuku 初始化/权限申请
             freezeSwitch.setSummary("需要 Dhizuku");
         } else if (app == null) {
