@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 记录 itemView 首次绑定时的原始上下 padding，供 SettingsPreferenceGroupAdapter 使用 -->
+    <item name="settingslib_group_original_padding" type="id" />
+</resources>

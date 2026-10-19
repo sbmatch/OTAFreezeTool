@@ -1,0 +1,43 @@
+/*
+ * Copyright (C) 2024 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.android.settingslib.widget
+
+import android.os.Bundle
+import android.view.View
+import androidx.preference.PreferenceFragmentCompat
+import androidx.preference.PreferenceScreen
+import androidx.recyclerview.widget.RecyclerView
+
+/** Base class for Settings to use PreferenceFragmentCompat */
+abstract class SettingsBasePreferenceFragment : PreferenceFragmentCompat() {
+
+    override fun onCreateAdapter(preferenceScreen: PreferenceScreen): RecyclerView.Adapter<*> {
+        if (SettingsThemeHelper.isExpressiveTheme(requireContext()))
+            return SettingsPreferenceGroupAdapter(preferenceScreen)
+        return super.onCreateAdapter(preferenceScreen)
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        // expressive 页面靠圆角卡片分组，不需要列表分隔线。
+        // 而且部分组件（如 SliderPreference）构造时 defStyleAttr 为 0，
+        // allowDividerAbove 会默认成 true，导致出现横跨整屏的分隔线。
+        if (SettingsThemeHelper.isExpressiveTheme(requireContext())) {
+            setDivider(null)
+        }
+    }
+}

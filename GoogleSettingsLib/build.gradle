@@ -1,0 +1,353 @@
+import org.gradle.api.DefaultTask
+import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.provider.MapProperty
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.InputDirectory
+import org.gradle.api.tasks.OutputDirectory
+import org.gradle.api.tasks.TaskAction
+
+plugins {
+    id 'com.android.library' // Assuming this is a library module
+}
+
+// ---------------------------------------------------------------------------
+// Source directories merged into this single AGP module.
+//
+// The AOSP tree keeps every SettingsLib library in its own Soong module (each
+// with its own manifest package and R class). Here they are all folded into
+// one Gradle module, so the directories are added to the same source sets.
+// ---------------------------------------------------------------------------
+def javaModules = [
+    'SettingsTheme',
+    'AppPreference',
+    'ButtonPreference',
+    'TwoTargetPreference',
+    'ActionButtonsPreference',
+    'BannerMessagePreference',
+    'BarChartPreference',
+    'BulletPreference',
+    'CardPreference',
+    'ExpandablePreference',
+    'FooterPreference',
+    'IllustrationPreference',
+    'IntroPreference',
+    'LayoutPreference',
+    'MainSwitchPreference',
+    'SelectorWithWidgetPreference',
+    'SliderPreference',
+    'StatusBannerPreference',
+    'TopIntroPreference',
+    'UsageProgressBarPreference',
+    'ZeroStatePreference',
+    // Metadata driven preference framework used by the widgets above.
+    'Preference',
+    'Metadata',
+    'DataStore',
+    // Standalone SettingsLib components that are usable from the app.
+    'CollapsingToolbarBaseActivity',
+    'EntityHeaderWidgets',
+    'Graph',
+    'HelpUtils',
+    'Ipc',
+    'SettingsSpinner',
+]
+
+// Modules that contain Kotlin sources (everything else is plain Java).
+def kotlinModules = [
+    'SettingsTheme',
+    'BulletPreference',
+    'CardPreference',
+    'ExpandablePreference',
+    'IntroPreference',
+    'StatusBannerPreference',
+    'TopIntroPreference',
+    'ZeroStatePreference',
+    'Preference',
+    'Metadata',
+    'DataStore',
+    'Graph',
+    'Ipc',
+]
+
+// Modules that ship resources.
+def resModules = javaModules.findAll { file("${it}/res").isDirectory() } -
+        ['Preference', 'Metadata', 'DataStore']
+
+def mergedJavaDir = layout.buildDirectory.dir('generated/mergedSources/java')
+def mergedKotlinDir = layout.buildDirectory.dir('generated/mergedSources/kotlin')
+def mergedResDir = layout.buildDirectory.dir('generated/mergedRes')
+def generatedFlagsDir = layout.buildDirectory.dir('generated/flags')
+def generatedProtoDir = layout.buildDirectory.dir('generated/graphProto')
+
+// Graph ships a .proto instead of checked-in generated classes. The AOSP build runs
+// protoc as part of Soong; do the same here with the protoc installed in the environment.
+def generateGraphProto = tasks.register('generateGraphProto', Exec) {
+    def outputDir = generatedProtoDir.get().asFile
+    inputs.file(file('Graph/graph.proto'))
+    outputs.dir(outputDir)
+    doFirst {
+        outputDir.deleteDir()
+        outputDir.mkdirs()
+    }
+    commandLine(System.getenv('PROTOC') ?: 'protoc',
+            "--java_out=lite:${outputDir}", 'Graph/graph.proto')
+}
+
+/**
+ * In AOSP every sub-library imports its own R class (in its manifest package),
+ * e.g. `com.android.settingslib.widget.theme.R`. This module only has a single
+ * `settingslib.R`, and library R classes are stripped from the AAR anyway, so
+ * the sources are copied into build/generated with those imports rewritten.
+ */
+def rewriteSubLibraryR = { String line ->
+    line.replaceAll(
+            /com\.android\.settingslib\.[A-Za-z0-9_.]+\.R\b/,
+            'settingslib.R')
+            // Build result: android.R.bool.config_sendPackageName and the config_* strings are
+            // not present in the public android.jar. Resolve them at runtime through the
+            // framework's resource table instead of hard-coding a value.
+            .replaceAll(/resources\.getBoolean\(android\.R\.bool\.config_sendPackageName\)/,
+                    'resources.getIdentifier("config_sendPackageName", "bool", "android") != 0 ' +
+                    '&& resources.getBoolean(resources.getIdentifier(' +
+                    '"config_sendPackageName", "bool", "android"))')
+            .replaceAll(/resources\.getString\(android\.R\.string\.(config_[A-Za-z0-9_]+)\)/,
+                    'resources.getString(resources.getIdentifier("$1", "string", "android"))')
+}
+
+/**
+ * Some sub-libraries declare their classes in a package that also owned their R class
+ * (e.g. com.android.settingslib.collapsingtoolbar) and therefore use bare `R.` references.
+ * After merging everything into settingslib.R those files need an explicit import.
+ */
+def addSharedRImport = { File dir ->
+    if (!dir.isDirectory()) {
+        return
+    }
+    dir.eachFileRecurse { File f ->
+        if (!f.isFile() || !(f.name.endsWith('.java') || f.name.endsWith('.kt'))) {
+            return
+        }
+        String text = f.getText('UTF-8')
+        // Match R. but not qualified references such as android.R. or androidx.preference.R.
+        if (!(text =~ /(?<![\w.$])R\s*\./)) {
+            return
+        }
+        if (text =~ /(?m)^\s*import\s+settingslib\.R\s*;?\s*$/) {
+            return
+        }
+        def pkg = text =~ /(?m)^package\s+[A-Za-z0-9_.]+\s*;?[ \t]*$/
+        if (!pkg.find()) {
+            return
+        }
+        def importLine = f.name.endsWith('.kt') ? '\nimport settingslib.R' : '\nimport settingslib.R;'
+        f.setText(text.substring(0, pkg.end()) + importLine + text.substring(pkg.end()), 'UTF-8')
+    }
+}
+
+def prepareJavaSources = tasks.register('prepareJavaSources', Sync) {
+    from(javaModules.collect { "${it}/src" }) { include '**/*.java' }
+    into mergedJavaDir
+    filter { line -> rewriteSubLibraryR(line) }
+    doLast {
+        addSharedRImport(mergedJavaDir.get().asFile)
+    }
+}
+
+def prepareKotlinSources = tasks.register('prepareKotlinSources', Sync) {
+    from(kotlinModules.collect { "${it}/src" }) { include '**/*.kt' }
+    into mergedKotlinDir
+    filter { line -> rewriteSubLibraryR(line) }
+    doLast {
+        addSharedRImport(mergedKotlinDir.get().asFile)
+    }
+}
+
+/**
+ * AOSP resources reference private framework attributes via the `androidprv`
+ * namespace. Those symbols do not exist in the public SDK, so aapt2 fails when
+ * the AAR resources are linked into the app. Copy each resource root and map
+ * the handful of private attributes to public/material equivalents.
+ */
+abstract class PrepareResTask extends DefaultTask {
+    @InputDirectory
+    abstract DirectoryProperty getInputDir()
+
+    @OutputDirectory
+    abstract DirectoryProperty getOutputDir()
+
+    @TaskAction
+    void copyResources() {
+        def input = inputDir.get().asFile
+        def output = outputDir.get().asFile
+        output.deleteDir()
+        if (!input.exists()) {
+            return
+        }
+
+        input.eachFileRecurse { file ->
+            if (!file.isFile()) {
+                return
+            }
+            def relative = file.absolutePath.substring(input.absolutePath.length() + 1)
+            def target = new File(output, relative)
+            target.parentFile.mkdirs()
+            if (file.name.endsWith('.xml')) {
+                target.text = file.getText('UTF-8')
+                        .replace('?androidprv:attr/colorAccentPrimaryVariant',
+                                '?android:attr/colorAccent')
+                        .replace('?androidprv:attr/colorAccentPrimary',
+                                '?android:attr/colorAccent')
+                        .replace('?androidprv:attr/materialColorSurfaceContainerHigh',
+                                '?attr/colorSurface')
+                        .replace('?androidprv:attr/textColorOnAccent',
+                                '?android:attr/textColorPrimary')
+            } else {
+                target.bytes = file.bytes
+            }
+        }
+    }
+}
+
+// Each resource root is copied separately to avoid file name collisions
+// (several modules ship their own values/strings.xml).
+def resRoots = [root: 'res', Color: 'Color/res'] +
+        resModules.collectEntries { [(it): "${it}/res"] }
+
+def prepareResTasks = resRoots.collect { name, path ->
+    tasks.register("prepare${name}Res", PrepareResTask) {
+        inputDir.set(file(path))
+        outputDir.set(mergedResDir.map { it.dir(name) })
+    }
+}
+
+def preparedResDirs = resRoots.keySet().collect {
+    mergedResDir.get().dir(it).asFile.absolutePath
+}
+
+// aconfig flags used by the sources (package -> getters). The AOSP build
+// generates these classes; they do not exist as sources in this tree.
+def flagClassMethods = [
+    'com.android.settingslib.widget.flags'                             : ['autoHideEmptyLottieRes'],
+    'com.android.settingslib.widget.selectorwithwidgetpreference.flags': ['allowSetTitleMaxLines'],
+]
+
+abstract class GenerateFlagsTask extends DefaultTask {
+    @Input
+    abstract MapProperty<String, List<String>> getFlagClasses()
+
+    @OutputDirectory
+    abstract DirectoryProperty getOutputDir()
+
+    @TaskAction
+    void generate() {
+        def output = outputDir.get().asFile
+        output.deleteDir()
+
+        flagClasses.get().each { pkg, methods ->
+            def getters = methods.collect { method ->
+                """    public static boolean ${method}() {
+        return false;
+    }"""
+            }.join('\n\n')
+
+            def file = new File(output, pkg.replace('.', '/') + '/Flags.java')
+            file.parentFile.mkdirs()
+            file.text = """package ${pkg};
+
+public final class Flags {
+    private Flags() {
+    }
+
+${getters}
+}
+"""
+        }
+    }
+}
+
+def generateFlags = tasks.register('generateAconfigFlags', GenerateFlagsTask) {
+    flagClasses.set(flagClassMethods)
+    outputDir.set(generatedFlagsDir)
+}
+
+// The generated sources must exist before Kotlin/Java compilation starts.
+tasks.named('preBuild') {
+    dependsOn prepareJavaSources, prepareKotlinSources, generateFlags, generateGraphProto
+    dependsOn prepareResTasks
+}
+tasks.matching { it.name.startsWith('compile') && it.name.endsWith('Kotlin') }.configureEach {
+    dependsOn generateGraphProto
+}
+tasks.matching { it.name.startsWith('compile') && it.name.endsWith('Kotlin') }.configureEach {
+    dependsOn prepareKotlinSources
+}
+tasks.withType(JavaCompile).configureEach {
+    dependsOn prepareJavaSources, generateFlags, generateGraphProto
+}
+tasks.matching {
+    (it.name.startsWith('merge') || it.name.startsWith('package')) &&
+            it.name.contains('Resources')
+}.configureEach {
+    dependsOn prepareResTasks
+}
+
+android {
+    namespace = 'settingslib'
+    compileSdk 35
+
+    defaultConfig {
+        minSdk 24
+        targetSdk 35
+    }
+
+    buildFeatures{
+        aidl true
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    sourceSets {
+        main {
+
+            java.srcDirs = [
+                mergedJavaDir.get().asFile.absolutePath,
+                generatedFlagsDir.get().asFile.absolutePath,
+                generatedProtoDir.get().asFile.absolutePath,
+            ]
+
+            kotlin.srcDirs = [
+                mergedKotlinDir.get().asFile.absolutePath,
+            ]
+
+            // 各个子目录里的资源文件（已复制到 build/generated 并修正 androidprv 属性）
+            res.srcDirs = preparedResDirs
+        }
+    }
+}
+
+dependencies {
+    // Used directly by the sources; declared explicitly instead of relying on
+    // transitive versions from lifecycle/preference/material.
+    implementation 'androidx.annotation:annotation:1.8.1'
+    implementation 'com.google.protobuf:protobuf-javalite:4.36.2'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.4'
+
+    // Types below are exposed through public API/superclasses of this library,
+    // so consumers need them on their compile classpath as well.
+    api 'androidx.activity:activity:1.9.3'                // CollapsingToolbar* superclasses
+    api 'androidx.appcompat:appcompat:1.6.1'              // CollapsingToolbarAppCompatActivity superclass
+    api 'androidx.collection:collection:1.4.4'            // BackupRestoreStorage#entityStates
+    api 'androidx.constraintlayout:constraintlayout:2.1.4' // CollapsableTextView superclass
+    api 'androidx.coordinatorlayout:coordinatorlayout:1.2.0' // CollapsingCoordinatorLayout superclass
+    api 'androidx.core:core:1.13.1'                       // ViewCompat / WindowInsetsCompat
+    api 'androidx.fragment:fragment:1.6.2'                // CollapsingToolbar* superclasses
+    api 'androidx.lifecycle:lifecycle-runtime-ktx:2.6.2'   // PreferenceLifecycleContext#lifecycleScope
+    api 'androidx.preference:preference:1.2.1'             // superclasses of all preference widgets
+    api 'com.airbnb.android:lottie:6.4.0'                  // ColorUtils#applyDynamicColors
+    api 'com.google.android.material:material:1.12.0'      // SliderPreference#setLabelFormater
+
+    // Internal implementation details only (not part of the public API).
+    implementation 'com.google.guava:guava:31.1-android'
+}
