@@ -13,3 +13,5 @@ build
 .externalNativeBuild
 .cxx
 local.properties
+
+/gradle/wrapper/gradle-8.11.1-bin.zip
