@@ -1,0 +1,4 @@
+
+include ':app'
+include ':hidden-api'
+include ':GoogleSettingsLib'
