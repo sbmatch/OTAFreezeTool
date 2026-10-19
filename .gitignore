@@ -1,0 +1,9 @@
+libs/
+obj/
+.gradle/
+build
+app/build/
+app/mapping.txt
+xcrash_lib/.cxx
+xcrash_lib/build/
+GoogleSettingsLib/build
