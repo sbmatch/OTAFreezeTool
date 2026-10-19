@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 深色模式 Monokai Pro -->
+    <color name="code_editor_bg">#FF2D2A2E</color>      <!-- Monokai Pro 背景 -->
+    <color name="code_editor_text">#FFFCFCFA</color>    <!-- 柔和白色文字 -->
+    <color name="code_editor_hint">#FF939293</color>    <!-- 灰色提示文字 -->
+    <color name="code_editor_border">#FF403E41</color>  <!-- 边框颜色 -->
+    <color name="code_editor_cursor">#FFFF6188</color>  <!-- Monokai 粉色光标 -->
+    <color name="code_editor_selection">#FF5B595C</color> <!-- 选择高亮 -->
+
+    <!-- 自适应图标背景兜底色；Android 12+ 会用壁纸动态色覆盖 -->
+    <color name="ic_launcher_background">#FF3F51B5</color>
+</resources>

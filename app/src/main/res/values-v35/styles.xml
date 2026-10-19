@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!--
+        Android 15+ 使用 SettingsLib 的 M3 (expressive) Preference 样式。
+        该 preferenceTheme 会提供 expressive 的 preferenceStyle /
+        switchPreferenceCompatStyle 等，其中开关的 widgetLayout 会指向
+        settingslib_expressive_preference_switch (MaterialSwitch)。
+    -->
+    <style name="AppTheme" parent="AppTheme.Base">
+        <item name="preferenceTheme">@style/PreferenceTheme.SettingsLib.Expressive</item>
+
+        <!-- 冷启动 starting window：使用和页面一致的背景 + 应用图标，避免黑屏 -->
+        <item name="android:windowSplashScreenBackground">?attr/colorSurfaceContainer</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+        <item name="android:windowSplashScreenIconBackgroundColor">@android:color/transparent</item>
+        <item name="android:windowSplashScreenAnimationDuration">0</item>
+    </style>
+
+    <!--
+        SettingsLib 的 TextAppearance 默认继承 TextAppearance.DeviceDefault，
+        颜色取决于设备默认主题而不是 App 的 DayNight 主题。
+        在某些 ROM 上会出现“浅色模式仍是浅色文字”的情况，这里改为跟随应用主题。
+        StatusBannerPreference 等组件的文字都继承自这个样式。
+    -->
+    <style name="SettingsLibTextAppearance" parent="@android:style/TextAppearance.DeviceDefault">
+        <item name="android:textColor">?android:attr/textColorPrimary</item>
+    </style>
+
+    <!--
+        CardPreference 默认用 system_primary / system_on_primary 这套系统调色板，
+        部分 ROM 上对比度不可靠（浅色模式白底白字、深色模式对比不足）。
+        这里改用 App 的 Material3 容器色：
+        浅色模式是浅底深字，深色模式是深底浅字，两种模式都有稳定对比度。
+    -->
+    <style name="SettingsLibCardStyle" parent="">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginHorizontal">?android:attr/listPreferredItemPaddingStart</item>
+        <item name="android:layout_marginVertical">@dimen/settingslib_expressive_space_extrasmall4</item>
+        <item name="cardBackgroundColor">?attr/colorPrimaryContainer</item>
+
+        <item name="cardElevation">0dp</item>
+        <item name="rippleColor">?android:attr/colorControlHighlight</item>
+    </style>
+
+    <!--
+        卡片标题/摘要跟随应用主题的正文颜色。
+        textColorPrimary / textColorSecondary 是 ColorStateList，能同时适配
+        浅色/深色模式；比库默认的 system_on_primary / system_on_secondary
+        （为 system_primary 背景设计）更适合现在的 primaryContainer 背景。
+    -->
+    <style name="TextAppearance.CardTitle.SettingsLib"
+        parent="@style/TextAppearance.PreferenceTitle.SettingsLib">
+        <item name="android:textColor">?android:attr/textColorPrimary</item>
+        <item name="android:textSize">20sp</item>
+    </style>
+
+    <style name="TextAppearance.CardSummary.SettingsLib"
+        parent="@style/TextAppearance.PreferenceSummary.SettingsLib">
+        <item name="android:textColor">?android:attr/textColorSecondary</item>
+    </style>
+
+</resources>

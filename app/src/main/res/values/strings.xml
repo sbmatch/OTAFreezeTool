@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="hello">Hello World, Main!</string>
+    <string name="app_name">冻结更新</string>
+    <string name="debug_crash">崩溃日志</string>
+    <string name="module_description">用于注入系统签名以获取系统权限</string>
+    <string name="demo_button_4">按钮 4</string>
+    <string name="demo_bar_chart_title">应用存储占用</string>
+    <string name="demo_bar_chart_details">详情</string>
+    <string name="demo_bar_chart_empty">暂无数据</string>
+    <string name="status_action_battery">查看电池设置</string>
+    <string name="status_action_uninstall">卸载应用</string>
+    <string name="status_action_check_update">查看更新</string>
+    <string name="status_action_learn_more">了解更多</string>
+</resources>

@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    设置页样式：
+    - 大标题在展开时显示在 AppBar 底部
+    - 向上滑动时折叠为 Toolbar 中的小标题
+    - Preference 列表直接作为 AppBar 的滚动内容
+-->
+<androidx.coordinatorlayout.widget.CoordinatorLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/rootLayout"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="?attr/colorSurfaceContainer"
+    android:fitsSystemWindows="true">
+
+    <com.google.android.material.appbar.AppBarLayout
+        android:id="@+id/appBarLayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="?attr/colorSurfaceContainer"
+        app:liftOnScroll="true">
+
+        <com.google.android.material.appbar.CollapsingToolbarLayout
+            android:id="@+id/collapsingToolbarLayout"
+            android:layout_width="match_parent"
+            android:layout_height="160dp"
+            app:collapsedTitleGravity="start|center_vertical"
+            app:collapsedTitleTextAppearance="@style/CollapsedTitleStyle"
+            app:contentScrim="?attr/colorSurfaceContainer"
+            app:expandedTitleGravity="bottom|start"
+            app:expandedTitleMarginBottom="28dp"
+            app:expandedTitleMarginEnd="24dp"
+            app:expandedTitleMarginStart="24dp"
+            app:expandedTitleTextAppearance="@style/ExpandedTitleStyle"
+            app:layout_scrollFlags="scroll|exitUntilCollapsed|snap"
+            app:statusBarScrim="@android:color/transparent"
+            app:title="@string/app_name"
+            app:titleEnabled="true">
+
+            <!--
+                Toolbar 固定在顶部，作为折叠后的小标题容器。
+                titleTextColor 设为透明：真正绘制标题的是 CollapsingToolbarLayout，
+                这样可以避免 setSupportActionBar() 设置的标题与折叠标题重复显示。
+            -->
+            <androidx.appcompat.widget.Toolbar
+                android:id="@+id/toolbar"
+                android:layout_width="match_parent"
+                android:layout_height="?attr/actionBarSize"
+                android:layout_gravity="top"
+                app:layout_collapseMode="pin"
+                app:navigationIconTint="?attr/colorOnSurface"
+                app:titleTextColor="@android:color/transparent" />
+
+        </com.google.android.material.appbar.CollapsingToolbarLayout>
+
+    </com.google.android.material.appbar.AppBarLayout>
+
+    <!--
+        直接交给 PreferenceFragmentCompat 的 RecyclerView 负责滚动，
+        不再套一层 NestedScrollView，AppBar 才能跟随滑动正常折叠。
+    -->
+    <androidx.fragment.app.FragmentContainerView
+        android:id="@+id/preferenceContainer"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="?attr/colorSurfaceContainer"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior" />
+
+    <!-- 保留该 id 供 Main#showAllServices() 使用 -->
+    <LinearLayout
+        android:id="@+id/contentLayout"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:orientation="vertical" />
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

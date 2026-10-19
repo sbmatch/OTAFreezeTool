@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    覆盖 ExpandablePreference 的展开箭头。
+    保持库里的 32x40 layer-list 结构，但把椭圆填充改为透明，去掉可见遮罩。
+-->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape
+            android:shape="oval">
+            <size android:width="32dp" android:height="40dp"/>
+            <solid android:color="@android:color/transparent"/>
+        </shape>
+    </item>
+    <item>
+        <vector
+            android:width="32dp"
+            android:height="40dp"
+            android:viewportWidth="32"
+            android:viewportHeight="40">
+            <path
+                android:pathData="M16,23.063L11,18.063L12.063,17L16,20.938L19.938,17L21,18.063L16,23.063Z"
+                android:fillColor="@color/settingslib_materialColorOnSurface"/>
+        </vector>
+    </item>
+</layer-list>
