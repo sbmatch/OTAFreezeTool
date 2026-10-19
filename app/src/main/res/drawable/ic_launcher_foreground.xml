@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    应用图标前景：禁止符号（圆圈 + 斜杠）+ mdi-arrow-up-bold 向上箭头，
+    箭头居中，表示“屏蔽系统更新”。整体缩放到 85% 留出安全边距。
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <group
+        android:pivotX="54"
+        android:pivotY="54"
+        android:scaleX="0.85"
+        android:scaleY="0.85">
+
+        <!-- 禁止符号圆圈 -->
+        <path
+            android:fillColor="@android:color/transparent"
+            android:strokeColor="#FFFFFFFF"
+            android:strokeWidth="5"
+            android:pathData="M29,54 A25,25 0 1 1 79,54 A25,25 0 1 1 29,54 Z" />
+
+        <!-- 斜杠（先画，箭头会盖在上面） -->
+        <path
+            android:fillColor="@android:color/transparent"
+            android:strokeColor="#FFFFFFFF"
+            android:strokeWidth="6"
+            android:strokeLineCap="round"
+            android:pathData="M38,38 L70,70" />
+
+        <!-- mdi-arrow-up-bold，居中于圆心 -->
+        <group
+            android:translateX="32.4"
+            android:translateY="32.26"
+            android:scaleX="1.8"
+            android:scaleY="1.8">
+            <path
+                android:fillColor="#FFFFFFFF"
+                android:strokeColor="@android:color/transparent"
+                android:pathData="M15,20H9V12H4.16L12,4.16L19.84,12H15V20Z" />
+        </group>
+
+    </group>
+</vector>

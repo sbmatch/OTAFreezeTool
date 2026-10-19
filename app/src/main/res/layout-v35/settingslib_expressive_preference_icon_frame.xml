@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    覆盖 SettingsTheme 的 expressive 图标框。
+    库里用 40dp 图标框 + marginEnd 12dp；24dp 的 vector 图标在 40dp 框里
+    居中后会左右各留 8dp，视觉上与标题的间距约 20dp，显得偏远。
+    这里只把 marginEnd 收到 4dp，视觉间距回到约 12dp，同时保留 40dp
+    图标列，其它 expressive 行（含 TwoTargetPreference）仍保持对齐。
+-->
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/icon_frame"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:minWidth="@dimen/settingslib_expressive_space_medium3"
+    android:minHeight="@dimen/settingslib_expressive_space_medium3"
+    android:gravity="center"
+    android:layout_marginEnd="@dimen/settingslib_expressive_space_extrasmall2"
+    android:filterTouchesWhenObscured="false">
+
+    <androidx.preference.internal.PreferenceImageView
+        android:id="@android:id/icon"
+        android:layout_width="@dimen/settingslib_expressive_space_medium3"
+        android:layout_height="@dimen/settingslib_expressive_space_medium3"
+        android:scaleType="centerInside"/>
+
+</LinearLayout>

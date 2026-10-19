@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 普通 Preference 右侧的跳转箭头，通过 setWidgetLayoutResource() 挂到 widget_frame -->
+<ImageView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/arrow"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:layout_gravity="center"
+    android:importantForAccessibility="no"
+    android:src="@drawable/ic_chevron_right"
+    android:tint="?android:attr/textColorSecondary" />

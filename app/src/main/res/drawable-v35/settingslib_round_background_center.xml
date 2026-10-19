@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 分组中间行：背景色跟随壁纸种子生成的 colorSurface -->
+<ripple xmlns:android="http://schemas.android.com/apk/res/android"
+    android:color="?android:colorControlHighlight">
+    <item
+        android:start="?android:attr/listPreferredItemPaddingStart"
+        android:end="?android:attr/listPreferredItemPaddingEnd"
+        android:top="2dp">
+        <shape android:shape="rectangle">
+            <solid android:color="?attr/colorSurfaceBright" />
+            <corners android:radius="4dp" />
+        </shape>
+    </item>
+</ripple>

@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    开发者行专用布局。
+
+    默认的 settingslib_expressive_preference_icon_frame 是 40dp 框 + 4dp marginEnd：
+    头像铺满 40dp 时，图标和文字之间只剩 4dp，显得很挤；如果给头像加 inset 缩小，
+    图标又会变小。
+    这里把图标框加宽到 48dp（40dp 图标居中，左右各 4dp），marginEnd 用 8dp，
+    这样头像可以保持 40dp，同时和文字之间留出约 12dp。
+-->
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:minHeight="?android:attr/listPreferredItemHeightSmall"
+    android:gravity="center_vertical"
+    android:paddingStart="?android:attr/listPreferredItemPaddingStart"
+    android:paddingEnd="?android:attr/listPreferredItemPaddingEnd"
+    android:background="?android:attr/selectableItemBackground"
+    android:clipToPadding="false"
+    android:baselineAligned="false"
+    android:filterTouchesWhenObscured="false">
+
+    <LinearLayout
+        android:id="@+id/icon_frame"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:minWidth="@dimen/settingslib_expressive_space_medium4"
+        android:minHeight="@dimen/settingslib_expressive_space_medium4"
+        android:gravity="center"
+        android:layout_marginEnd="@dimen/settingslib_expressive_space_extrasmall4"
+        android:filterTouchesWhenObscured="false">
+
+        <androidx.preference.internal.PreferenceImageView
+            android:id="@android:id/icon"
+            android:layout_width="@dimen/settingslib_expressive_space_medium3"
+            android:layout_height="@dimen/settingslib_expressive_space_medium3"
+            android:scaleType="centerInside"/>
+
+    </LinearLayout>
+
+    <include layout="@layout/settingslib_expressive_preference_text_frame"/>
+
+    <!-- Preference should place its actual preference widget here. -->
+    <LinearLayout
+        android:id="@android:id/widget_frame"
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:gravity="end|center_vertical"
+        android:paddingStart="@dimen/settingslib_expressive_space_small1"
+        android:paddingEnd="0dp"
+        android:orientation="vertical"/>
+
+</LinearLayout>

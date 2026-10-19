@@ -1,0 +1,304 @@
+apply plugin: 'com.android.application'
+
+android {
+    namespace 'com.sbmatch.androtool'
+    compileSdk 37
+    buildToolsVersion "37.0.0"
+    
+    defaultConfig {
+        applicationId "com.sbmatch.otafreeze"
+        minSdk 31
+        targetSdk 37
+        versionCode 11
+        versionName "1.1"
+        
+        ndk {
+            abiFilters 'arm64-v8a'
+        }
+        
+        externalNativeBuild {
+            ndkBuild {
+               abiFilters 'arm64-v8a'
+            }
+        }
+    
+    }
+
+    ndkVersion "29.0.14206865"
+
+    externalNativeBuild {
+        ndkBuild {
+            path = file('jni/Android.mk')
+        }
+    }
+    
+    signingConfigs {
+        release {
+            storeFile file(System.getenv('KEYSTORE_PATH') ?: new File(System.properties['user.home'] as String, ".android/debug.keystore"))
+            storePassword System.getenv('KEYSTORE_PASSWORD') ?: "android"
+            keyAlias System.getenv('KEY_ALIAS') ?: "androiddebugkey"
+            keyPassword System.getenv('KEY_PASSWORD') ?: "android"
+            enableV2Signing true
+            enableV3Signing true
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled true          // 启用混淆
+            shrinkResources true        // 启用资源压缩
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.release
+        }
+        
+        debug {
+            minifyEnabled false
+            shrinkResources false
+        }
+    }
+    
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    sourceSets {
+        main{
+            jniLibs.srcDirs = ['libs']
+        }
+        release {
+            // generateOssLicenses 在构建时把依赖许可列表生成到这里
+            assets.srcDirs += layout.buildDirectory.dir("generated/ossLicenses/release").get().asFile.absolutePath
+        }
+    }
+
+    packagingOptions {
+        jniLibs {
+            useLegacyPackaging = true
+        }
+        
+        resources {
+            excludes += ['META-INF/AL2.0', 'META-INF/LGPL2.1']
+        }
+    }
+    
+    buildFeatures {
+        prefab true
+        aidl true
+    }
+    
+    androidComponents {
+    onVariants(selector().all()) { variant ->
+        variant.outputs.forEach { output ->
+            def versionName = android.defaultConfig.versionName
+            output.outputFileName.set("OTAFreeze_v${versionName}.apk")
+        }
+    }
+}
+
+    dependencies {
+        implementation fileTree(dir: 'libs', include: ['*.jar', '*.aar'])
+        
+    	implementation 'androidx.appcompat:appcompat:1.6.1'
+    	implementation 'com.google.android.material:material:1.9.0'
+    	implementation 'androidx.coordinatorlayout:coordinatorlayout:1.2.0'
+    	implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+    	
+    	implementation 'com.github.kongzue:BaseFramework:7.0.7'
+    	implementation 'commons-io:commons-io:2.22.0'
+    	
+    	//implementation 'dev.rikka.shizuku:api:13.1.5'
+    	//implementation 'dev.rikka.shizuku:provider:13.1.5'
+    	
+    	implementation "io.github.iamr0s:Dhizuku-API:2.6.0"
+    	implementation 'org.luckypray:dexkit:2.3.0'
+    	
+    	compileOnly 'io.github.libxposed:api:102.0.0'
+    	compileOnly(project(':hidden-api'))
+    	
+    	implementation project(":GoogleSettingsLib")
+    }
+}
+
+// ---------------------------------------------------------------------------
+// 生成“开源许可”页面用的 assets/open_source_licenses.json
+//
+// AGP 的 sdkReleaseDependencyData 会输出 sdkDependencies.txt，里面只有
+// groupId / artifactId / version，没有许可证信息。这里在构建时解析它，
+// 再从 Gradle 本地缓存的 POM 里读取 <licenses>，生成 JSON 打包进 release assets。
+// POM 缺失时用常见 group 的兜底映射。
+// ---------------------------------------------------------------------------
+def ossLicensesDir = layout.buildDirectory.dir("generated/ossLicenses/release")
+
+def generateOssLicenses = tasks.register("generateOssLicenses") {
+    dependsOn("sdkReleaseDependencyData")
+
+    def sdkDepsFile = layout.buildDirectory.file("outputs/sdk-dependencies/release/sdkDependencies.txt")
+    def outputDir = ossLicensesDir
+    inputs.file(sdkDepsFile)
+    outputs.dir(outputDir)
+
+    doLast {
+        def src = sdkDepsFile.get().asFile
+        def outDir = outputDir.get().asFile
+        def outFile = new File(outDir, "open_source_licenses.json")
+        outDir.mkdirs()
+
+        if (!src.exists()) {
+            logger.warn("generateOssLicenses: ${src} not found, writing empty list")
+            outFile.setText("[]", "UTF-8")
+            return
+        }
+
+        def pomRoot = new File(System.getProperty("user.home"), ".gradle/caches/modules-2/files-2.1")
+
+        def findPom = { String group, String artifact, String version ->
+            def dir = new File(pomRoot, "${group}/${artifact}/${version}")
+            if (!dir.isDirectory()) {
+                return null
+            }
+            File found = null
+            dir.eachFileRecurse { f ->
+                if (found == null && f.isFile() && f.name.endsWith(".pom")) {
+                    found = f
+                }
+            }
+            return found
+        }
+
+        def normalizeLicense = { String name ->
+            if (!name) {
+                return null
+            }
+            def n = name.toLowerCase()
+            if (n.contains("apache") && n.contains("2")) {
+                return "Apache-2.0"
+            }
+            if (n.contains("mit")) {
+                return "MIT"
+            }
+            def isLgpl = n.contains("lgpl") || n.contains("lesser general public license")
+            if (isLgpl && n.contains("3")) {
+                return "LGPL-3.0"
+            }
+            if (isLgpl) {
+                return "LGPL"
+            }
+            if (n.contains("bsd") && n.contains("3")) {
+                return "BSD-3-Clause"
+            }
+            if (n.contains("bsd")) {
+                return "BSD"
+            }
+            return name.trim()
+        }
+
+        def fallbackLicense = { String group ->
+            if (group.startsWith("androidx.")
+                    || group.startsWith("org.jetbrains")
+                    || group.startsWith("com.google.guava")
+                    || group == "commons-io"
+                    || group == "com.squareup.okio") {
+                return ["Apache-2.0", "https://www.apache.org/licenses/LICENSE-2.0"]
+            }
+            if (group == "com.github.kongzue") {
+                return ["未声明", "https://github.com/kongzue/BaseFramework"]
+            }
+            return ["未声明", ""]
+        }
+
+        def text = src.getText("UTF-8")
+        def matcher = text =~ /groupId:\s*"([^"]+)"\s*\n\s*artifactId:\s*"([^"]+)"\s*\n\s*version:\s*"([^"]+)"/
+        def entries = []
+        def seen = new HashSet<String>()
+
+        while (matcher.find()) {
+            def group = matcher.group(1)
+            def artifact = matcher.group(2)
+            def version = matcher.group(3)
+            if (!seen.add("${group}:${artifact}:${version}")) {
+                continue
+            }
+
+            String licenseName = null
+            String licenseUrl = null
+            def pom = findPom(group, artifact, version)
+            if (pom != null) {
+                try {
+                    def factory = javax.xml.parsers.DocumentBuilderFactory.newInstance()
+                    factory.setNamespaceAware(false)
+                    def doc = factory.newDocumentBuilder().parse(pom)
+                    def licenses = doc.getElementsByTagName("licenses")
+                    def names = []
+                    def urls = []
+                    if (licenses.length > 0) {
+                        def licenseNodes = licenses.item(0).getChildNodes()
+                        for (int i = 0; i < licenseNodes.length; i++) {
+                            def licenseNode = licenseNodes.item(i)
+                            if (licenseNode.nodeType != org.w3c.dom.Node.ELEMENT_NODE
+                                    || licenseNode.nodeName != "license") {
+                                continue
+                            }
+                            String n = null
+                            String u = null
+                            def child = licenseNode.getFirstChild()
+                            while (child != null) {
+                                if (child.nodeType == org.w3c.dom.Node.ELEMENT_NODE) {
+                                    if (child.nodeName == "name") {
+                                        n = child.textContent?.trim()
+                                    } else if (child.nodeName == "url") {
+                                        u = child.textContent?.trim()
+                                    }
+                                }
+                                child = child.nextSibling
+                            }
+                            if (n) {
+                                def normalized = normalizeLicense(n)
+                                if (normalized && !names.contains(normalized)) {
+                                    names.add(normalized)
+                                }
+                            }
+                            if (u) {
+                                urls.add(u)
+                            }
+                        }
+                    }
+                    if (names) {
+                        licenseName = names.join(" / ")
+                    }
+                    if (urls) {
+                        licenseUrl = urls[0]
+                    }
+                } catch (Throwable ignored) {
+                    // POM 解析失败就走兜底
+                }
+            }
+            if (!licenseName) {
+                def fallback = fallbackLicense(group)
+                licenseName = fallback[0]
+                licenseUrl = fallback[1]
+            }
+
+            entries << [
+                    groupId   : group,
+                    artifactId: artifact,
+                    version   : version,
+                    license   : licenseName,
+                    url       : licenseUrl ?: ""
+            ]
+        }
+
+        entries.sort { it.artifactId.toString().toLowerCase() }
+        outFile.setText(groovy.json.JsonOutput.toJson(entries), "UTF-8")
+        logger.lifecycle("generateOssLicenses: wrote ${entries.size()} libraries to ${outFile}")
+    }
+}
+
+// 生成目录被声名为 release assets 源，所有读取 assets 的任务都要显式依赖它
+tasks.configureEach { t ->
+    if (t.name == "mergeReleaseAssets"
+            || t.name.contains("Lint")
+            || t.name.startsWith("lintVital")) {
+        t.dependsOn(generateOssLicenses)
+    }
+}

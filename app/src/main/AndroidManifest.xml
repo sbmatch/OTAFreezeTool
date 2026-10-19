@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    >
+
+    <!-- 包可见性：Dhizuku 与系统更新应用 -->
+    <queries>
+        <package android:name="com.rosan.dhizuku" />
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.DEFAULT" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+    </queries>
+
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <application
+        android:name=".MyApp"
+        android:theme="@style/AppTheme"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher"
+        
+        android:description="@string/module_description"
+        android:label="@string/app_name">
+        <activity
+            android:label="@string/app_name"
+            android:name=".Main"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".DebugCrashActivity"
+            android:exported="false" />
+
+        <activity
+            android:theme="@style/Theme.DayNight.Translucent"
+            android:name=".EntryDiaogActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:screenOrientation="behind">
+            <intent-filter>
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+        <!-- Shizuku 依赖已移除，先注释掉 provider
+        <provider
+            android:name="rikka.shizuku.ShizukuProvider"
+            android:authorities="${applicationId}.shizuku"
+            android:enabled="true"
+            android:exported="true"
+            android:multiprocess="false"
+            android:permission="android.permission.INTERACT_ACROSS_USERS_FULL" />
+        -->
+
+        <!-- ByteHook AAR 已移除，先注释掉 provider
+        <provider
+            android:name=".HookInitProvider"
+            android:authorities="${applicationId}.hookinit"
+            android:enabled="true"
+            android:exported="false" />
+        -->
+
+    </application>
+</manifest>

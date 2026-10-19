@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    复刻 AOSP Settings 的 preference_widget_gear.xml。
+    这个布局会被 TwoTargetPreference 通过 setWidgetLayoutResource()
+    塞进 @android:id/widget_frame，也就是竖线右侧的第二点击区。
+-->
+<ImageView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/settings_button"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:layout_gravity="center"
+    android:background="?android:attr/selectableItemBackground"
+    android:contentDescription="@string/settings_label"
+    android:paddingStart="?android:attr/listPreferredItemPaddingEnd"
+    android:paddingEnd="?android:attr/listPreferredItemPaddingEnd"
+    android:scaleType="center"
+    android:src="@drawable/ic_settings_accent" />

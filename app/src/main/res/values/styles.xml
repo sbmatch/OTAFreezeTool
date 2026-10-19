@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!--
+        应用主题：Material 3 设置页风格。
+
+        要点：
+        - NoActionBar：标题交给 main.xml 里的 CollapsingToolbarLayout 绘制
+        - 透明系统栏 + edge-to-edge，内容可以自然延伸到状态栏下方
+        - AppTheme 的 preferenceTheme 在 values-v35 中覆盖为
+          PreferenceTheme.SettingsLib.Expressive，让 Preference 组件使用 M3 布局
+    -->
+    <style name="AppTheme" parent="AppTheme.Base" />
+
+    <style
+        name="AppTheme.Base"
+        parent="Theme.Material3.DynamicColors.DayNight.NoActionBar">
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+
+        <!-- 页面背景用 surface；分组卡片用 surfaceBright（参考 KernelSU TonalCard） -->
+        <item name="android:windowBackground">?attr/colorSurfaceContainer</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+        <item name="android:enforceStatusBarContrast">false</item>
+        <item name="android:enforceNavigationBarContrast">false</item>
+        <item name="android:windowLightStatusBar">?attr/isLightTheme</item>
+        <item name="android:windowLightNavigationBar">?attr/isLightTheme</item>
+
+    </style>
+    
+
+    <!--
+        BarChartPreference 的“详情”按钮原本继承 DeviceDefault 的 Colored Button，
+        颜色由设备默认主题决定，在部分 ROM/深色模式下对比度很低。
+        改为跟随 App 的 Material3 colorPrimary。
+    -->
+    <style
+        name="SettingsBarChartDetailsButton"
+        parent="@android:style/Widget.DeviceDefault.Button.Borderless.Colored">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:gravity">center</item>
+        <item name="android:textColor">?attr/colorPrimary</item>
+    </style>
+
+    <!-- 展开时的大标题 -->
+    <style
+        name="ExpandedTitleStyle"
+        parent="TextAppearance.Material3.HeadlineMedium">
+        <item name="android:textColor">?attr/colorOnSurface</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:textSize">32sp</item>
+    </style>
+
+    <!-- 折叠时的小标题 -->
+    <style
+        name="CollapsedTitleStyle"
+        parent="TextAppearance.Material3.TitleLarge">
+        <item name="android:textColor">?attr/colorOnSurface</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:textSize">20sp</item>
+    </style>
+
+    <style
+        name="Theme.DayNight.Translucent"
+        parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="android:windowAnimationStyle">@android:style/Animation</item>
+        <item name="windowActionBar">false</item>
+        <item name="windowActionBarOverlay">false</item>
+    </style>
+
+</resources>

@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    覆盖 CardPreference 的布局。
+
+    库里的 icon ImageView 没有指定 tint，图标本身用的是
+    ?attr/colorOnSurfaceVariant（为 surface 背景设计的灰色）；
+    而 app 里 SettingsLibCardStyle 的 cardBackgroundColor 改成了
+    ?attr/colorPrimaryContainer，灰色图标落在这个容器色上对比度偏低。
+
+    这里给 ImageView 加上 ?attr/colorOnPrimaryContainer，
+    与标题/摘要（TextAppearance.CardTitle/Summary.SettingsLib）保持一致，
+    同时 ImageView 的 tint 会覆盖 vector 自带 tint。
+-->
+<com.google.android.material.card.MaterialCardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    style="@style/SettingsLibCardStyle">
+
+    <LinearLayout
+        android:id="@+id/card_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:baselineAligned="false"
+        android:minHeight="@dimen/settingslib_expressive_space_large3"
+        android:paddingStart="@dimen/settingslib_expressive_space_small1"
+        android:paddingEnd="@dimen/settingslib_expressive_space_small1"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <LinearLayout
+            android:id="@+id/icon_frame"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:minWidth="@dimen/settingslib_expressive_space_medium3"
+            android:minHeight="@dimen/settingslib_expressive_space_medium3"
+            android:gravity="center"
+            android:orientation="horizontal">
+
+            <ImageView
+                android:id="@android:id/icon"
+                android:src="@drawable/settingslib_arrow_drop_down"
+                android:layout_width="@dimen/settingslib_expressive_space_medium3"
+                android:layout_height="@dimen/settingslib_expressive_space_medium3"
+                android:scaleType="centerInside"
+                android:tint="?attr/colorOnPrimaryContainer"/>
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/text_container"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+
+            android:paddingVertical="@dimen/settingslib_expressive_space_small2"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@android:id/title"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hyphenationFrequency="normalFast"
+                android:lineBreakWordStyle="phrase"
+                android:textAppearance="@style/TextAppearance.CardTitle.SettingsLib"/>
+
+            <TextView
+                android:id="@android:id/summary"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hyphenationFrequency="normalFast"
+                android:lineBreakWordStyle="phrase"
+                android:textAppearance="@style/TextAppearance.CardSummary.SettingsLib"/>
+
+        </LinearLayout>
+
+        <ImageView
+            android:id="@android:id/closeButton"
+            android:layout_width="@dimen/settingslib_expressive_space_medium4"
+            android:layout_height="@dimen/settingslib_expressive_space_medium4"
+            android:padding="@dimen/settingslib_expressive_space_extrasmall4"
+            android:layout_gravity="center"
+            android:src="@drawable/settingslib_expressive_icon_close"
+            android:background="?android:attr/selectableItemBackground"/>
+
+    </LinearLayout>
+
+</com.google.android.material.card.MaterialCardView>

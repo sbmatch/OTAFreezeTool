@@ -1,0 +1,16 @@
+LOCAL_PATH := $(call my-dir)
+
+# 声明预构建的静态库
+include $(CLEAR_VARS)
+LOCAL_MODULE    := turbojpeg
+LOCAL_SRC_FILES := libturbojpeg.a
+include $(PREBUILT_STATIC_LIBRARY)
+
+# 链接静态库
+include $(CLEAR_VARS)
+LOCAL_MODULE     := turbojpeg_jni
+LOCAL_SRC_FILES  := turbojpeg_jni.c
+LOCAL_STATIC_LIBRARIES := turbojpeg
+LOCAL_LDFLAGS    += -Wl,-E
+LOCAL_LDLIBS := -llog
+include $(BUILD_SHARED_LIBRARY) 
