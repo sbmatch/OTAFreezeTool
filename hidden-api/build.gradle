@@ -1,0 +1,25 @@
+plugins {
+    id 'com.android.library' // Assuming this is a library module
+}
+
+android {
+    namespace = 'com.sbmatch.hidden_api'
+    compileSdk 35
+
+    defaultConfig {
+        minSdk 24
+        targetSdk 35
+    }
+
+    buildFeatures{
+        aidl true
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    compileOnly 'androidx.annotation:annotation:1.7.1'
+}
